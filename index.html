@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>土地受餓 · 子不語</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/ma-shan-zheng@latest/chinese-simplified-400-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/lxgw-wenkai-tc@latest/chinese-traditional-400-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/lxgw-wenkai-tc@latest/chinese-traditional-700-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/noto-serif-tc@latest/chinese-traditional-400-normal.css">
+<style>
+:root{
+  --paper:#f1e7cf; --paper2:#e7dabb; --paper3:#ddcca6;
+  --ink:#2a2419; --ink2:#4c4334; --ink3:#6b5f49;
+  --silk:#1f3138; --silk2:#2b424b; --silk3:#3a5560;
+  --gold:#b08d57; --gold2:#cda869; --gold3:#e3c98c;
+  --seal:#a8392b; --seal2:#c44a39;
+  --jade:#4e7d6b; --blue:#33565e; --brown:#7a5a32; --cloth:#5c5648;
+  --display:'Ma Shan Zheng','LXGW WenKai TC','Noto Serif TC',serif;
+  --body:'LXGW WenKai TC','Noto Serif TC',serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;overflow:hidden;background:#15110b;color:var(--ink);font-family:var(--body);}
+body{user-select:none;}
+#game{position:fixed;inset:0;overflow:hidden;}
+
+/* ---------- layers ---------- */
+.bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 1.1s ease;will-change:opacity;}
+.bg.on{opacity:1;}
+.bg::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(20,15,8,.34) 100%);}
+.bg.zoom{animation:ken 26s ease-in-out infinite alternate;}
+@keyframes ken{from{transform:scale(1.02)}to{transform:scale(1.12)}}
+#ambient{position:absolute;inset:0;z-index:5;pointer-events:none;}
+#sprites{position:absolute;inset:0;z-index:3;pointer-events:none;}
+.sprwrap{position:absolute;bottom:0;height:clamp(330px,82vh,720px);transition:left .7s cubic-bezier(.2,.7,.2,1),right .7s cubic-bezier(.2,.7,.2,1),filter .5s,opacity .5s;}
+.sprwrap.pos-left{left:1%;}
+.sprwrap.pos-center{left:50%;transform:translateX(-50%);}
+.sprwrap.pos-right{right:1%;}
+.spr{height:100%;animation:sprIn .7s cubic-bezier(.2,.8,.2,1);mix-blend-mode:multiply;-webkit-mask-image:radial-gradient(125% 100% at 50% 42%,#000 56%,transparent 93%);mask-image:radial-gradient(125% 100% at 50% 42%,#000 56%,transparent 93%);}
+.spr img{height:100%;display:block;animation:breathe 5.5s ease-in-out infinite;transform-origin:bottom center;}
+@keyframes sprIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+@keyframes breathe{0%,100%{transform:scaleY(1) translateY(0)}50%{transform:scaleY(1.008) translateY(-2px)}}
+.sprwrap.exit{opacity:0;transform:translateY(10px);transition:opacity .45s,transform .45s;}
+.sprwrap.pos-center.exit{transform:translateX(-50%) translateY(10px);}
+.sprwrap.dim{filter:brightness(.82) saturate(.82);}
+.sprwrap.speak{z-index:4;}
+.sprwrap.speak .spr{filter:drop-shadow(0 6px 14px rgba(0,0,0,.18));}
+.sprwrap.speak img{animation:breathe 4s ease-in-out infinite, speakP 4s ease-in-out infinite;}
+@keyframes speakP{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+
+#flash{position:absolute;inset:0;z-index:6;background:#1a140c;opacity:0;pointer-events:none;}
+#flash.go{animation:flash 1s ease;}
+@keyframes flash{0%{opacity:0}42%{opacity:.92}100%{opacity:0}}
+
+/* ---------- top bar ---------- */
+#topbar{position:fixed;top:0;left:0;right:0;height:3.1em;z-index:40;display:none;align-items:center;justify-content:space-between;padding:0 1.1em;
+  background:linear-gradient(180deg,rgba(31,49,56,.96),rgba(31,49,56,.82));
+  border-bottom:1px solid var(--gold);box-shadow:0 2px 10px rgba(0,0,0,.4),inset 0 -2px 0 rgba(176,141,87,.25);}
+#topbar.show{display:flex;}
+#chapTag{font-family:var(--display);color:var(--gold3);font-size:1.15em;letter-spacing:.12em;text-shadow:0 1px 2px #000;}
+#chapTag b{color:#fff;font-weight:400;}
+.tb-btns{display:flex;gap:.35em;}
+.tb{font-family:var(--body);font-size:.92em;color:var(--paper);background:transparent;border:1px solid rgba(205,168,105,.35);
+  padding:.32em .7em;cursor:pointer;letter-spacing:.18em;border-radius:2px;transition:.2s;}
+.tb:hover{background:rgba(205,168,105,.18);color:#fff;border-color:var(--gold2);}
+.tb.on{background:var(--seal);border-color:var(--seal2);color:#fff;}
+#progbar{position:fixed;top:3.1em;left:0;height:2px;background:var(--gold2);z-index:41;width:0;transition:width .4s;box-shadow:0 0 6px var(--gold2);}
+
+/* ---------- dialogue ---------- */
+#advanceLayer{position:fixed;inset:0;z-index:20;cursor:pointer;display:none;}
+#advanceLayer.show{display:block;}
+#dlgWrap{position:fixed;left:50%;bottom:3vh;transform:translateX(-50%);width:min(1180px,94vw);z-index:25;display:none;}
+#dlgWrap.show{display:block;}
+#dlg{position:relative;background:linear-gradient(180deg,rgba(241,231,207,.97),rgba(231,218,187,.97));
+  border:3px solid var(--silk);border-radius:3px;padding:2.4em 2.2em 1.7em;min-height:21vh;
+  box-shadow:inset 0 0 0 2px var(--gold),inset 0 0 30px rgba(122,90,50,.12),0 12px 34px rgba(0,0,0,.5);}
+#dlg::before{content:"";position:absolute;top:.55em;left:.7em;right:.7em;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+#namePlate{position:absolute;top:-1.05em;left:1.4em;display:flex;align-items:center;gap:.45em;
+  font-family:var(--display);font-size:1.45em;color:var(--paper);padding:.18em 1em .28em;letter-spacing:.14em;
+  background:var(--blue);border:1px solid var(--gold);border-radius:2px;box-shadow:0 4px 10px rgba(0,0,0,.35);
+  transition:background .3s;}
+#namePlate .seal{width:.62em;height:.62em;background:var(--seal);border-radius:1px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
+#namePlate::after{content:"";position:absolute;bottom:-7px;left:1.2em;border:6px solid transparent;border-top-color:var(--blue);transition:border-top-color .3s;}
+#dlgText{font-size:clamp(1.02rem,2.1vw,1.32rem);line-height:2;color:var(--ink);min-height:3.4em;letter-spacing:.02em;}
+#dlgText .stage{color:var(--ink3);font-size:.92em;}
+#dlgText.inner{color:#46585d;font-style:italic;}
+#dlgText .cur{display:inline-block;width:.5em;color:var(--seal);animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0}}
+#indicator{position:absolute;bottom:.7em;right:1.2em;color:var(--seal);font-size:1.1em;opacity:0;transition:opacity .3s;}
+#indicator.show{opacity:1;animation:bob 1.2s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+/* ---------- choices ---------- */
+#choices{position:fixed;left:50%;bottom:24vh;transform:translateX(-50%);width:min(820px,92vw);z-index:50;display:none;flex-direction:column;gap:.8em;}
+#choices.show{display:flex;}
+#choicePrompt{text-align:center;font-family:var(--display);color:var(--gold3);font-size:1.25em;letter-spacing:.1em;margin-bottom:.3em;text-shadow:0 2px 6px #000;}
+.choice{font-family:var(--body);font-size:clamp(.95rem,1.9vw,1.15rem);color:var(--paper);text-align:left;cursor:pointer;
+  background:linear-gradient(180deg,rgba(31,49,56,.92),rgba(20,32,38,.92));border:1px solid var(--gold);border-left:4px solid var(--seal);
+  padding:.85em 1.2em;border-radius:2px;letter-spacing:.04em;line-height:1.6;position:relative;overflow:hidden;transition:.25s;}
+.choice::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 0% 50%,rgba(168,57,43,.4),transparent 60%);transform:scaleX(0);transform-origin:left;transition:transform .4s;}
+.choice:hover{border-left-color:var(--gold2);color:#fff;transform:translateX(6px);}
+.choice:hover::before{transform:scaleX(1);}
+.choice .mk{color:var(--gold2);font-family:var(--display);margin-right:.6em;}
+
+/* ---------- chapter / end overlays ---------- */
+.ov{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 50%,rgba(20,15,8,.5),rgba(10,8,4,.82));backdrop-filter:blur(3px);}
+.ov.show{display:flex;}
+#chapCard{position:relative;text-align:center;padding:2em 3em;}
+.enso{position:absolute;top:50%;left:50%;width:min(46vh,360px);height:min(46vh,360px);transform:translate(-50%,-50%);
+  border:5px solid rgba(42,36,25,.55);border-radius:50%;-webkit-mask-image:radial-gradient(circle,transparent 60%,#000 62%,#000 92%,transparent 95%);
+  mask-image:radial-gradient(circle,transparent 60%,#000 62%,#000 92%,transparent 95%);opacity:.7;animation:ensoIn 1.4s ease both;}
+@keyframes ensoIn{from{transform:translate(-50%,-50%) scale(.6) rotate(-30deg);opacity:0}to{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:.7}}
+#chapNum{font-family:var(--body);color:var(--gold2);letter-spacing:.5em;font-size:1.1em;margin-bottom:.4em;animation:fadeUp .8s .2s both;}
+#chapTitle{font-family:var(--display);color:var(--paper);font-size:clamp(3rem,9vw,6rem);letter-spacing:.25em;margin:0;text-shadow:0 4px 18px #000;animation:fadeUp .9s .35s both;}
+#chapSub{font-family:var(--body);color:var(--ink3);background:var(--paper);display:inline-block;padding:.2em 1em;margin-top:.8em;letter-spacing:.3em;border:1px solid var(--gold);animation:fadeUp 1s .55s both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+#chapSeal{position:absolute;right:8%;bottom:6%;width:3.4em;height:3.4em;background:var(--seal);color:#f3e0c0;font-family:var(--display);
+  display:flex;align-items:center;justify-content:center;font-size:1.5em;border-radius:3px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);
+  transform:rotate(-6deg) scale(2);opacity:0;animation:stamp .5s .9s cubic-bezier(.2,1.6,.4,1) both;}
+@keyframes stamp{to{transform:rotate(-6deg) scale(1);opacity:.92}}
+
+#endCard{text-align:center;}
+#endSeal{width:5em;height:5em;background:var(--seal);color:#f3e0c0;font-family:var(--display);font-size:2.6em;display:flex;align-items:center;justify-content:center;
+  border-radius:4px;margin:0 auto 1.4em;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25);transform:rotate(-5deg) scale(2.4);opacity:0;animation:stamp .6s .2s cubic-bezier(.2,1.6,.4,1) both;}
+#endTitle{font-family:var(--display);color:var(--paper);font-size:2rem;letter-spacing:.3em;margin:0 0 .3em;animation:fadeUp .8s .5s both;}
+#endSub{color:var(--gold3);font-family:var(--body);letter-spacing:.2em;margin-bottom:1.6em;animation:fadeUp .9s .7s both;}
+.ov-btns{display:flex;gap:1em;justify-content:center;flex-wrap:wrap;animation:fadeUp 1s .9s both;}
+.ovbtn{font-family:var(--display);font-size:1.3em;letter-spacing:.2em;color:var(--paper);background:linear-gradient(180deg,var(--silk2),var(--silk));
+  border:1px solid var(--gold);padding:.5em 1.4em;cursor:pointer;border-radius:2px;transition:.25s;}
+.ovbtn:hover{background:var(--seal);border-color:var(--seal2);transform:translateY(-3px);}
+
+/* ---------- history ---------- */
+#history{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);z-index:75;background:linear-gradient(180deg,var(--paper),var(--paper2));
+  border-left:4px solid var(--silk);box-shadow:-10px 0 30px rgba(0,0,0,.5);transform:translateX(100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);
+  display:flex;flex-direction:column;}
+#history.show{transform:translateX(0);}
+#histHead{font-family:var(--display);font-size:1.5em;letter-spacing:.3em;color:var(--silk);padding:1em 1.2em .6em;border-bottom:1px solid var(--gold);display:flex;justify-content:space-between;align-items:center;}
+#histClose{cursor:pointer;color:var(--seal);font-size:1.2em;}
+#histList{overflow-y:auto;padding:1em 1.2em 2em;flex:1;}
+.hi{margin-bottom:1em;line-height:1.8;}
+.hi .hn{font-family:var(--display);color:var(--seal);font-size:1.05em;margin-right:.4em;}
+.hi .ht{color:var(--ink2);}
+
+/* ---------- title ---------- */
+#title{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:url('https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1e6cf10b8-02db-4334-ac81-39a62854fac9.png') center/cover;}
+#title::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,15,8,.55),rgba(20,15,8,.1) 45%,rgba(20,15,8,.45));}
+#titleInner{position:relative;z-index:2;width:min(1100px,94vw);height:88vh;display:flex;align-items:center;justify-content:space-between;}
+#titleLeft{flex:1;padding-left:2em;}
+#titleRight{writing-mode:vertical-rl;text-align:right;padding-right:1em;}
+#tMain{font-family:var(--display);color:#f3e6c8;font-size:clamp(3.5rem,11vw,8rem);letter-spacing:.18em;line-height:1.1;text-shadow:0 4px 24px #000,0 0 2px #000;}
+#tSeals{display:flex;flex-direction:column;gap:.7em;margin-top:1.4em;align-items:flex-end;}
+.tseal{writing-mode:horizontal-tb;background:var(--seal);color:#f3e0c0;font-family:var(--display);padding:.3em .4em;border-radius:3px;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);letter-spacing:.1em;font-size:1.1em;transform:rotate(-3deg);}
+#tSub{font-family:var(--body);color:var(--gold3);letter-spacing:.5em;font-size:clamp(.9rem,2vw,1.2rem);margin-top:1.2em;}
+#tMenu{display:flex;flex-direction:column;gap:1em;margin-top:2.4em;}
+.tmbtn{font-family:var(--display);font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:.3em;color:var(--paper);background:transparent;
+  border:none;border-left:3px solid transparent;padding:.2em .6em;cursor:pointer;text-align:left;transition:.3s;text-shadow:0 2px 8px #000;}
+.tmbtn:hover{border-left-color:var(--seal);color:#fff;transform:translateX(8px);letter-spacing:.4em;}
+.tmbtn small{display:block;font-family:var(--body);font-size:.42em;letter-spacing:.2em;color:var(--gold2);margin-top:.1em;}
+#tCredit{position:fixed;bottom:1.4em;left:50%;transform:translateX(-50%);z-index:3;color:rgba(243,230,200,.7);font-size:.82em;letter-spacing:.2em;text-align:center;}
+#tAudio{position:fixed;top:1.2em;right:1.4em;z-index:3;}
+
+/* ---------- analysis ---------- */
+#analysis{position:fixed;inset:0;z-index:90;display:none;overflow-y:auto;
+  background:linear-gradient(rgba(15,11,6,.78),rgba(15,11,6,.86)),url('https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1320d95d0-d10f-4013-93d8-6cfdf66a1647.png') center/cover fixed;}
+#analysis.show{display:block;}
+#anCol{max-width:940px;margin:0 auto;padding:3em 1.6em 5em;}
+#anHead{text-align:center;margin-bottom:2.4em;position:relative;}
+#anHead h1{font-family:var(--display);color:var(--gold3);font-size:clamp(2.4rem,7vw,4rem);letter-spacing:.2em;margin:0;text-shadow:0 3px 14px #000;}
+#anHead .src{color:var(--paper);letter-spacing:.3em;margin-top:.6em;font-size:1.05em;}
+#anHead .seals{display:flex;gap:.6em;justify-content:center;margin-top:1em;}
+.an-seal{background:var(--seal);color:#f3e0c0;font-family:var(--display);padding:.35em .5em;border-radius:3px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);transform:rotate(-4deg);}
+.an-sec{background:linear-gradient(180deg,rgba(241,231,207,.97),rgba(231,218,187,.97));border:1px solid var(--gold);border-radius:3px;
+  padding:1.8em 1.8em 2em;margin-bottom:1.8em;box-shadow:0 8px 24px rgba(0,0,0,.4),inset 0 0 0 2px rgba(176,141,87,.3);position:relative;}
+.an-sec::before{content:"";position:absolute;top:.5em;left:.6em;right:.6em;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.an-h{font-family:var(--display);color:var(--silk);font-size:1.7em;letter-spacing:.12em;margin:0 0 .9em;display:flex;align-items:center;gap:.6em;}
+.an-h .num{display:inline-flex;width:1.4em;height:1.4em;align-items:center;justify-content:center;background:var(--seal);color:#f3e0c0;font-size:.6em;border-radius:2px;transform:rotate(-4deg);}
+.an-sec p{line-height:2.05;color:var(--ink2);margin:0 0 1em;text-align:justify;font-size:1.04rem;}
+.an-sec p:last-child{margin-bottom:0;}
+.an-sec p .em{color:var(--seal);font-weight:700;}
+
+/* vertical original text */
+.vert-box{background:linear-gradient(180deg,#f6efdc,#efe5cb);border:1px dashed var(--gold);padding:1.4em 1em;border-radius:2px;}
+.vert-scroll{writing-mode:vertical-rl;height:58vh;overflow-x:auto;overflow-y:hidden;padding:.6em 1em;scrollbar-width:thin;}
+.vert-scroll::-webkit-scrollbar{height:8px;}
+.vert-scroll::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px;}
+#origText{font-family:var(--body);font-size:clamp(1.1rem,2.4vw,1.5rem);line-height:2.4;color:var(--ink);margin:0;letter-spacing:.05em;}
+#origText .rp{color:var(--seal);font-style:normal;}
+#origText .anno{color:var(--seal);border-bottom:2px dotted var(--seal);cursor:pointer;transition:.2s;}
+#origText .anno:hover,#origText .anno:focus{background:rgba(168,57,43,.16);outline:none;}
+#noteBar{margin-top:1em;min-height:2.6em;background:var(--silk);color:var(--gold3);padding:.7em 1em;border-radius:2px;line-height:1.7;font-size:.98em;border-left:4px solid var(--seal);}
+#noteBar b{color:#fff;font-family:var(--display);font-size:1.15em;margin-right:.5em;letter-spacing:.1em;}
+
+/* annotation cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.8em;}
+.card{background:rgba(31,49,56,.06);border:1px solid rgba(176,141,87,.5);border-left:3px solid var(--seal);padding:.7em .9em;border-radius:2px;}
+.card .ct{font-family:var(--display);color:var(--seal);font-size:1.25em;letter-spacing:.08em;}
+.card .cn{color:var(--ink2);font-size:.92em;line-height:1.7;margin-top:.2em;}
+
+.trans{background:rgba(78,125,107,.08);border-left:4px solid var(--jade);}
+.colophon{text-align:center;color:var(--ink3);font-family:var(--display);letter-spacing:.2em;font-size:1.2em;margin-top:1em;}
+.colophon .seals{display:flex;gap:.6em;justify-content:center;margin-top:.8em;}
+#anBtns{display:flex;gap:1em;justify-content:center;flex-wrap:wrap;margin-top:1em;}
+
+/* loading */
+#load{position:fixed;inset:0;z-index:200;background:#15110b;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold3);font-family:var(--display);letter-spacing:.4em;font-size:1.6em;transition:opacity .6s;}
+#load.hide{opacity:0;pointer-events:none;}
+#loadBar{width:200px;height:2px;background:rgba(205,168,105,.25);margin-top:1.4em;overflow:hidden;}
+#loadBar i{display:block;height:100%;width:0;background:var(--gold2);transition:width .3s;}
+
+/* volume popover */
+#volPop{position:fixed;top:3.4em;right:1em;z-index:60;background:var(--silk);border:1px solid var(--gold);border-radius:3px;padding:1em 1.1em;display:none;flex-direction:column;gap:.8em;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:200px;}
+#volPop.show{display:flex;}
+#volPop label{color:var(--gold3);font-size:.85em;letter-spacing:.15em;display:flex;flex-direction:column;gap:.3em;}
+#volPop input[type=range]{accent-color:var(--seal);}
+
+@media(max-width:680px){
+  #namePlate{font-size:1.2em;left:1em;}
+  #dlg{padding:2em 1.2em 1.4em;}
+  #topbar{height:2.8em;padding:0 .6em;}
+  .tb{padding:.3em .45em;font-size:.78em;letter-spacing:.08em;}
+  #chapTag{font-size:.95em;}
+  #progbar{top:2.8em;}
+  .sprwrap{height:clamp(280px,62vh,520px);}
+  #choices{bottom:30vh;}
+  #titleInner{flex-direction:column-reverse;justify-content:center;gap:1em;text-align:center;}
+  #titleRight{writing-mode:horizontal-tb;padding:0;}
+  #tSeals{flex-direction:row;justify-content:center;}
+  #tMenu{align-items:center;}
+  .tmbtn{text-align:center;}
+  #vert-scroll,.vert-scroll{height:42vh;}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="bg zoom on" id="bgA"></div>
+  <div class="bg" id="bgB"></div>
+  <canvas id="ambient"></canvas>
+  <div id="sprites"></div>
+  <div id="flash"></div>
+
+  <!-- top bar -->
+  <div id="topbar">
+    <div id="chapTag">子不語・<b id="chapName">卷一</b></div>
+    <div class="tb-btns">
+      <button class="tb" id="bHist">歷史</button>
+      <button class="tb" id="bAuto">自動</button>
+      <button class="tb" id="bSkip">快進</button>
+      <button class="tb" id="bMusic">樂音</button>
+      <button class="tb" id="bTitle">卷首</button>
+    </div>
+  </div>
+  <div id="progbar"></div>
+
+  <!-- dialogue -->
+  <div id="advanceLayer"></div>
+  <div id="dlgWrap">
+    <div id="dlg">
+      <div id="namePlate"><span class="seal"></span><span id="nameTxt">旁白</span></div>
+      <div id="dlgText"></div>
+      <div id="indicator">▼</div>
+    </div>
+  </div>
+  <div id="choices"></div>
+
+  <!-- chapter -->
+  <div class="ov" id="chapterOv">
+    <div id="chapCard">
+      <div class="enso"></div>
+      <div id="chapNum"></div>
+      <h1 id="chapTitleOv"></h1>
+      <div id="chapSub"></div>
+      <div id="chapSeal">印</div>
+    </div>
+  </div>
+
+  <!-- end -->
+  <div class="ov" id="endOv">
+    <div id="endCard">
+      <div id="endSeal">終</div>
+      <h2 id="endTitle">卷 終</h2>
+      <div id="endSub">清官原自耐饑貧</div>
+      <div class="ov-btns">
+        <button class="ovbtn" id="endAnalysis">閱全文・賞析</button>
+        <button class="ovbtn" id="endReplay">重讀此卷</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- history -->
+  <div id="history">
+    <div id="histHead"><span>回 憶 錄</span><span id="histClose">✕</span></div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- volume -->
+  <div id="volPop">
+    <label>樂音<input type="range" id="volMusic" min="0" max="100" value="55"></label>
+    <label>音效<input type="range" id="volSfx" min="0" max="100" value="70"></label>
+  </div>
+
+  <!-- title -->
+  <div id="title">
+    <div id="titleInner">
+      <div id="titleLeft">
+        <div id="tMenu">
+          <button class="tmbtn" id="mStart">開始遊戲<small>展卷・入夢</small></button>
+          <button class="tmbtn" id="mCont" style="display:none">繼續前緣<small>自上次之處</small></button>
+          <button class="tmbtn" id="mAnalysis">全文與賞析<small>原文・注解・論析</small></button>
+        </div>
+      </div>
+      <div id="titleRight">
+        <div id="tMain">土地受餓</div>
+        <div id="tSeals"><span class="tseal">子不語</span><span class="tseal">袁枚</span></div>
+        <div id="tSub">閱微夜譚・志怪新編</div>
+      </div>
+    </div>
+    <div id="tCredit">改編自 清・袁枚《子不語》　｜　純前端網頁視覺小說</div>
+    <button class="tb" id="tAudio">樂音</button>
+  </div>
+
+  <!-- analysis -->
+  <div id="analysis">
+    <div id="anCol">
+      <div id="anHead">
+        <h1>土地受餓</h1>
+        <div class="src">清・袁枚《子不語》（《新齊諧》）</div>
+        <div class="seals"><span class="an-seal">隨園</span><span class="an-seal">子不語</span></div>
+      </div>
+
+      <div class="an-sec">
+        <div class="an-h"><span class="num">壹</span>原文（朱字可點，以觀注解）</div>
+        <div class="vert-box">
+          <div class="vert-scroll"><p id="origText"></p></div>
+          <div id="noteBar">將游標移至朱紅詞條，或點擊之，注解即現於此。</div>
+        </div>
+      </div>
+
+      <div class="an-sec trans">
+        <div class="an-h"><span class="num">貳</span>白話譯文</div>
+        <p id="transText"></p>
+      </div>
+
+      <div class="an-sec">
+        <div class="an-h"><span class="num">參</span>詞語注解</div>
+        <div class="cards" id="cardsBox"></div>
+      </div>
+
+      <div class="an-sec">
+        <div class="an-h"><span class="num">肆</span>文本賞析</div>
+        <div id="analysisBody"></div>
+      </div>
+
+      <div class="an-sec">
+        <div class="an-h"><span class="num">伍</span>改編說明</div>
+        <p>本視覺小說據原文改編，於不悖原意的前提下，增設老僕<span class="em">張福</span>以添煙火氣，並將「前兄所救之女」具象為幽魂<span class="em">玉娘</span>，使「益壽一紀」的因果有一張可感的面孔；又設兩處抉擇——贈銀之誠、當物之決——以見張望齡性情。立繪與場景皆擬清代水墨冊頁之風，以「留白疊墨」之法，使人物如自紙上走出；配樂以五聲音階即興生成，聊作古琴、洞簫之想。惟願讀者在笑過、嘆過之後，仍記得那座破廟裡「齋戒」的老朋友。</p>
+      </div>
+
+      <div class="colophon">
+        右錄袁簡齋《子不語》一則，並贅數語。<br>歲在丙午，燈下漫筆。
+        <div class="seals"><span class="an-seal">丙午</span><span class="an-seal">漫筆</span></div>
+      </div>
+
+      <div id="anBtns" class="ov-btns">
+        <button class="ovbtn" id="anBack">返回結局</button>
+        <button class="ovbtn" id="anReplay">重新開始</button>
+        <button class="ovbtn" id="anTitle">回卷首</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="load"><div>展 卷 中</div><div id="loadBar"><i></i></div></div>
+</div>
+
+<script>
+/* ===================== IMAGES ===================== */
+const IMG={
+ title:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1e6cf10b8-02db-4334-ac81-39a62854fac9.png',
+ sick_night:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/167832deb-8e10-4cee-bf94-418e502c3831.png',
+ dream:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1293bd44a-da1f-4617-9c61-952a548e57b3.png',
+ sick_day:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/10e4bbf75-fa85-427e-bb89-b29459141225.png',
+ temple:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1985179a2-fe83-4057-9ffb-a35a68e86274.png',
+ desk:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1320d95d0-d10f-4013-93d8-6cfdf66a1647.png',
+ zhang:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1792901c2-a57a-4636-b12d-7f6ad02121b1.png',
+ gu:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/18c79e1a4-528e-4ae0-b179-6626f237bf22.png',
+ yu:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/156a8151f-2e67-4e4a-8f37-d60eeda8c3dc.png',
+ fu:'https://image.qwenlm.ai/public_source/328bae54-a430-4b1d-a623-985576f4c103/1399c828e-18f5-485f-b0ae-29d153a6b743.png'
+};
+const CHAR={
+ zhang:{name:'張望齡',color:'#33565e'},
+ gu:{name:'顧某・土地',color:'#7a5a32'},
+ yu:{name:'玉娘',color:'#4e7d6b'},
+ fu:{name:'張福',color:'#5c5648'},
+ n:{name:'旁白',color:'#3a3a3a'},
+ x:{name:'望齡・心聲',color:'#5a6b70',inner:true}
+};
+const AMBIENT_MODE={title:'petal',sick_night:'firefly',dream:'mist',sick_day:'dust',temple:'dust'};
+
+/* ===================== SCRIPT ===================== */
+const SC=[
+ {type:'chapter',n:'卷一',t:'瘧 疾',sub:'錢塘・夏'},
+ {bg:'sick_night',s:[['fu','right']],k:'n',t:'乾隆年間，七月，錢塘城中。'},
+ {bg:'sick_night',s:[['fu','right']],k:'n',t:'暑氣未消，蘇堤柳上的蟬鳴一聲緊似一聲，西湖的水把雷峰塔映成一團朦朧的金。'},
+ {bg:'sick_night',s:[['fu','right']],k:'n',t:'城南一條小巷裡，住著一位邑生，姓張，名望齡。家不甚裕，卻好讀書；米缸雖常見底，為人卻慷慨，最喜周濟人。'},
+ {bg:'sick_night',s:[['fu','right']],k:'n',t:'這一年他染了瘧疾，隔日一發，幾番折騰下來，精神大虧，竟至不能起床。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'zhang',t:'唉……又來了……'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'zhang',t:'先是一陣寒，彷彿被人丟進冰窟；接著一陣熱，彷彿被人擱在炭盆上。這瘧鬼，倒真會折騰人。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'fu',t:'少爺再忍忍，大夫這就來了。藥我已煎好，在爐上溫著呢。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'zhang',t:'張福，你……咳咳……你這件袍子，是不是連穿三天了？'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'fu',t:'哎喲，老奴的袍子算什麼。要緊的是少爺的病。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'zhang',t:'我這家境……也把你熬苦了。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'fu',t:'少爺說的什麼話！先老爺收留我那日，老奴便發過誓，要服侍張家三輩子。這等喪氣話，莫再說了。'},
+ {bg:'sick_night',s:[['zhang','center'],['fu','right']],k:'n',t:'話未說完，瘧疾又發。張望齡只覺一股寒氣自腳心升起，隨即一股烈火直衝頂門。'},
+ {bg:'sick_night',s:[['zhang','center']],k:'x',t:'不好……又來了……'},
+ {bg:'sick_night',s:[['zhang','center']],k:'n',t:'燭火搖了搖，帳幔彷彿浮了起來，耳邊的人聲漸漸遠去，像隔著一汪水。'},
+ {bg:'sick_night',s:[['fu','right']],k:'fu',t:'少爺？少爺！糟了，又燒糊塗了——老奴這就去請大夫！'},
+ {bg:'sick_night',s:[],k:'n',t:'急促的腳步聲遠去了。屋裡只剩燭花爆裂的細響，和張望齡自己的心跳。'},
+ {bg:'dream',s:[],k:'n',t:'不知過了多久。等他再睜開眼，已不在病榻之上。'},
+ {bg:'dream',s:[],k:'n',t:'四下裡是一片茫茫的霧，不遠不近，不明不暗；腳下踩的不是磚，是雲。'},
+ {bg:'dream',s:[['zhang','center']],k:'zhang',t:'這……這是何處？我還在夢裡麼？'},
+ {bg:'dream',s:[['zhang','center']],k:'n',t:'忽地，霧深處傳來踉的腳步，一深一淺，像是有人扶著什麼走來。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'霧分開了。來人身著一件破袍，面有菜色，眉目卻清朗——張望齡一望，不由得失聲。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄？！是你麼，顧兄？！'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'望齡，是我。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄……你，你不是三年前就……那時我還去吊過你，給你寫過輓聯的。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'收到了。「燈昏雨落閉柴門」那一句，我在陰間讀過幾遍，讀得落下淚來。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'那……那你怎麼到這兒來了？莫非……莫非我的壽數也盡了？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（嘆）望齡，我不瞞你。你的壽算，的確是盡了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'哈……原來如此。瘧鬼纏身，燈油將盡——我早有預感的。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'卻還有一線生機。你幼年時，曾救過一個女子——你還記得麼？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'一個女子？……啊，你是說那年錢塘江邊，落水的那個小姑娘？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'正是。那年你才十二歲，想也不想便跳下江去，把她撈了上來。你連她姓什麼都沒問，事後也從未對人提起。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'區區小事，提它做什麼。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'你當是小事，陰司的帳卻記得分明。因這一樁善事，你的壽數，益了一紀。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'一紀？十二年？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'正是。陰司的簿子最公道：一善，雖微必錄；一惡，雖微亦錄。那女子的感恩，換了你十二年的陽壽。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'那麼……我不死了？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'不死了。還有一樁——那女子如今也已過世，正在陰間。她得知你病重，特地前來探問。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'她……她來了？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'……恩公張郎。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'你是……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'恩公不認得我了，可我忘不了恩公的模樣。那年錢塘江邊，若非恩公伸手，玉娘早已是波心的一縷冤魂。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'原來你就是那個小姑娘……你……你也……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'玉娘命薄，三年前病故了。可在陰間聽說恩公病重，心裡放不下，特地來探。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'一個鬼……一個鬼怎能走這樣遠的路……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'gu',t:'（皺眉）哼，提起這事我便氣。她來的路上，被本地一個鬼棍攔住了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'鬼棍？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'gu',t:'本地一個潑皮鬼，專訛詐活人、勒索亡魂。見玉娘年輕孤身，便攔路索要「過路錢」，還誣她生前有黯昧之事，要拖她去陰司告狀。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'那鬼棍……說若不給他銀錢，便要壞我名節，叫我連鬼都做不成、轉世也無門……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'gu',t:'幸而我及時趕到，把那廝狠狠呵飭了一頓。我說：「此女乃貞善之魂，況是來報恩的，你竟敢捏造罪名、敲詐於她——你當陰司公堂是你誣告的地方不成？！」'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'gu',t:'那廝見我雖是個小官，卻是正經土地，無可奈何，只得灰溜溜走了。我這便把玉娘送了回去。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'原來……原來是這樣。顧兄，我也替她謝你。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'gu',t:'你我之間，何須言謝。我今日來，為兩樁事：一則告訴你壽數已益，好教你安心養病；二則代玉娘問一聲好。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'恩公，請好好養病。玉娘在陰間，每日為恩公點一盞燈，祈恩公無災無難。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'zhang',t:'玉娘……我這陽世無親，陰間倒有一個記掛我的。張望齡……何德何能。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right'],['yu','center']],k:'yu',t:'恩公珍重。燈亮時，玉娘再來瞧恩公。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'女子的身影漸漸淡入霧中，像一滴墨落進了水裡。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄，且慢。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'張望齡在懷中摸索——竟連夢裡，也莫名揣著一隻荷包。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄，你為我的事奔波至此，衣裳襤褸，面有菜色——這一點銀子，請收下，買些衣食用度。'},
+ {type:'choice',prompt:'張望齡解開荷包，心裡躊躇——',opts:[
+   {t:'傾囊相贈：把荷包裡的銀子全數取出。',set:{gold:'all'}},
+   {t:'分而贈之：取一半銀子，留一半看病。',set:{gold:'half'}},
+   {t:'欲贈還止：只怕故人難堪，遞了又縮手。',set:{gold:'try'}}
+ ]},
+ {if:{gold:'all'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'張望齡把荷包整個倒了過來，幾塊碎銀、幾串銅錢，雙手捧了上去。'},
+ {if:{gold:'all'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（笑）你……連夢裡都這般實心眼。'},
+ {if:{gold:'half'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'張望齡取出一半銀子，想了想，又添上兩串銅錢。'},
+ {if:{gold:'half'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'你留一半給自己看病——好，病還沒把你糊塗了頭。'},
+ {if:{gold:'try'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'張望齡躊躇片刻，取出幾塊銀子，遞了又縮，生怕老朋友面上難堪。'},
+ {if:{gold:'try'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（看破）你遞了又縮——是怕我難堪麼？你我之間，不必這般客套。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'只是——你這銀子，我不能收。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'為何？故人相贈，有何推辭的？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'望齡，你只知我如今是本地土地，卻不知做土地的苦處。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'土地？那不是正神麼？官雖小，總有香火供奉，百姓也拜你——何苦之有？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（苦笑）你說的是大廟大祠，是城隍、是龍王。我這等小土地廟，地僻民窮，連一片遮風的瓦都沒有。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'況且我素講操守。來求的鬼與民，正的，我佑他；想行賄神靈、為非作歹的，我一杖打出去——如此，便再沒人來了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'沒人來，便沒香火；沒香火，便沒供奉。我這個土地——嘿，終年常常受餓。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'什麼？！土地神……也會受餓？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'受餓還是小事。難熬的是，本地的鬼知道我沒香火，連鬼都欺我。方才那個鬼棍——他之所以是棍，正因他無所忌憚。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'那麼……陰間也是清官難做？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'何處不是？（頓）可我並不悔。非分之財，縱是故人見贈，我終不受。這便是我的操守——生前是個窮秀才，死後是個窮土地。窮，卻心安。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'x',t:'望著他那件破袍、那張菜色的臉，我不知該笑還是該哭——可笑與哭之外，更多的是心酸。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'夜深了，你該回去了。記著：安心養病，按時服藥，病自會好。我——回廟裡「齋戒」去了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄！且慢——'},
+ {bg:'dream',s:[],k:'n',t:'霧又湧起。土地那件破袍在風裡一揚，轉眼間，人影已杳。'},
+ {bg:'dream',s:[],k:'n',t:'張望齡在夢中大笑了起來，笑著笑著，便笑醒了。'},
+ {type:'chapter',n:'卷三',t:'牲 牢',sub:'破廟・午'},
+ {bg:'sick_day',s:[['fu','right']],k:'n',t:'再睜眼時，窗紙已白，燭也燒到了底。張福伏在床邊打盹，腦袋一點一點。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'（驚醒）少爺？！你……你出汗了？瘧退了！老天保佑，瘧退了！'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'張福，扶我起來。今日我有一樁事要辦。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'哎喲我的少爺，病才剛退，什麼事等不得——'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'我要去村口的土地廟，祭一祭土地爺。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'（愣住）……土地爺？少爺莫不是燒糊塗了？咱們與土地爺又無冤仇。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'你不懂。昨夜我夢見一位故人，他如今便是本地的土地。他——他終年受餓。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'……土地爺受餓？這等事，老奴活了一輩子也沒聽過。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'如今我聽過了。去，備一頭整豬、一隻整羊、一隻整雞——三牲俱全，再蒸一大鍋白米飯。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'少爺！咱家米缸刮得見底，也不過三斗米，那一頭整豬的銀子，打哪兒來？'},
+ {type:'choice',prompt:'張望齡沉吟片刻——當掉什麼？',opts:[
+   {t:'當掉冬袍：縱受些寒，也無妨。',set:{pawn:'robe'}},
+   {t:'當掉先父遺下的端硯：文房之物，正該派上用場。',set:{pawn:'stone'}},
+   {t:'袍與硯一併當了：要麼不做，要做便做足。',set:{pawn:'both'}}
+ ]},
+ {if:{pawn:'robe'},bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'把我那件冬袍拿去當了。天雖漸冷，我窩在被裡也對付得過去。——餉一位朋友，有什麼捨不得的？'},
+ {if:{pawn:'stone'},bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'把先父留我的那方端硯拿去當了。文房之物，閒著也是閒著，正該派上用場。——餉一位朋友，有什麼捨不得的？'},
+ {if:{pawn:'both'},bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'zhang',t:'冬袍也當，端硯也當。要麼不做，要做便做足——三牲要俱全，白米飯要熱騰騰的。'},
+ {bg:'sick_day',s:[['zhang','center'],['fu','right']],k:'fu',t:'（嘆）唉……罷了罷了。少爺的脾氣，老奴曉得。這就去。'},
+ {bg:'sick_day',s:[],k:'n',t:'張福忙活了一上午，東借西湊，到了午後，三牲齊備，白米蒸熟，酒也溫好了。'},
+ {bg:'temple',s:[['zhang','center']],k:'n',t:'村口的土地廟，果然破敗：廟頂塌了半邊，泥塑的金漆剝落，連香爐都缺了一隻腳，用半塊磚頭墊著。'},
+ {bg:'temple',s:[['zhang','center']],k:'zhang',t:'……這便是土地爺的廟了。'},
+ {bg:'temple',s:[['zhang','center']],k:'x',t:'難怪他說終年無香火。這廟，連野狗都不願多待。'},
+ {bg:'temple',s:[['zhang','center']],k:'n',t:'張望齡擺好祭品，斟上酒，深深三揖。'},
+ {bg:'temple',s:[['zhang','center']],k:'zhang',t:'顧兄——不，土地爺。張望齡備了薄祭，請勿嫌其菲薄。'},
+ {bg:'temple',s:[['zhang','center']],k:'n',t:'風穿過破窗，燭火連晃了三晃——像是有人笑了。'},
+ {bg:'temple',s:[['zhang','center'],['fu','right']],k:'fu',t:'少爺……方才那風，是吹的麼？'},
+ {bg:'temple',s:[['zhang','center'],['fu','right']],k:'zhang',t:'嗯。他領了。'},
+ {type:'chapter',n:'卷四',t:'大 計',sub:'病榻・夜'},
+ {bg:'sick_night',s:[],k:'n',t:'是夜，張望齡合眼睡去，果然又入了夢。'},
+ {bg:'dream',s:[['gu','center']],k:'n',t:'夢中土地又來。只是今日他不同了——面上有了血色，腳步也穩，連那件破袍，似乎也乾淨了幾分。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（含笑）望齡，我來謝你。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄，今日氣色好多了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'怎能不好？人得一飽，可耐三日；鬼得一飽，可耐一年。你這一祭，我——嘿，我可挨到陰司的大計了。'},
+ {if:{pawn:'robe'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'我聽說了——你當了冬袍，換祭品來祭我。這等天氣，你若再凍出病來，我老顧反倒成了罪人。'},
+ {if:{pawn:'stone'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'我聽說了——你當了令尊的遺硯。那是你的心愛之物，竟為我捨了……唉，你這人。'},
+ {if:{pawn:'both'},bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'我聽說了——袍也當了，硯也當了。你……你叫我說什麼好。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'身外之物，有什麼捨不得。只你吃飽了——這才是要緊的。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'（笑）不想鬼吃一飽，竟能耐一年。那你定然挨得到大計——大計又是何物？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'陰間也如陽世，每隔幾年考核官吏。大計，便是陰司百官的大考；政績卓著的，評個「卓異」，便可保舉升遷。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'以你的操守清廉，必得卓異。到時升做城隍，便不必再受餓了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（搖頭）望齡，你是讀書人，卻不懂官場——連陰間的官場也不懂。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'此話怎講？'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'解應酬者，可望格外超升；做清官者，只好大計卓薦。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'……'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'哈哈哈哈——！妙，妙一個「解應酬者，可望格外超升」！'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'（亦笑）所以我想通了。做土地，便做個受餓的土地；做清官，便做個挨餓的清官。——大計上得個卓異，也就夠了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'zhang',t:'顧兄，若天下的官都似你，百姓便有福了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'gu',t:'若天下的官都似我，天下的廟，便都似我這般破敗了。'},
+ {bg:'dream',s:[['zhang','left'],['gu','right']],k:'n',t:'二人，一個陽世秀才，一個陰間土地，在夢中放聲大笑，笑得霧都散了。'},
+ {bg:'sick_day',s:[],k:'n',t:'自此，張望齡的瘧疾漸漸痊癒。每逢歲時祭祀，他必親備三牲，往土地廟去祭——因他知道，那座破廟裡，有一位老朋友在「齋戒」。'},
+ {bg:'sick_day',s:[],k:'n',t:'而陰間那位女子，聽說後來投生到了一戶好人家。過奈何橋那日，她回望錢塘，深深三拜。'},
+ {bg:'dream',s:[],k:'n',t:'正是：一語驚回夢裡身，燈昏雨落夜沉沉。莫道陰司無直吏，清官原自耐饑貧。'},
+ {type:'end'}
+];
+
+/* ===================== ANALYSIS DATA ===================== */
+const ORIG='杭州錢塘{邑生|秀才。明清時通過院試、入學為生員者稱「邑生」，俗稱秀才。}張望齡，病{瘧|瘧疾，即打擺子。古人以為瘧由瘧鬼作祟，故發熱時「見鬼」，正合此病之象。}。熱重時，見已故同學顧某者踉蹌而來，曰：「兄{壽算|壽數、壽命。算，指命中註定的年數。}已絕，幸幼年曾救一女，益壽{一紀|十二年。《國語・晉語》：「救人一命，益壽一紀。」韋昭注：「十二年為一紀。」}。前兄所救之女知兄病重，特來奉探，為地方{鬼棍|潑皮鬼、無賴鬼。棍，指敲詐勒索之徒。}所詐，誣以平素有{黯昧|昏暗不明，指見不得人、虧心之事。}事。弟大加{呵飭|大聲呵斥訓誡。飭，整飭、申。}，方遣之去，特詣府奉賀。」張見故人為己事而來，衣裳{襤褸|衣服破爛。}，面有{菜色|飢餓而面黃肌瘦之色。《孟子》「民有飢色」可參。}，因謝以金。顧辭不受，曰：「我現為本處{土地神|陰間神職中最基層者，掌管一方土地，位卑而事繁。}，因官職小，地方清苦，我又素講操守，不肯擅受鬼詞，濫作威福，故終年無{香火|祭祀的供奉。無香火即無祭品，故土地挨餓。}，雖作土地，往往受餓。然非分之財，雖故人見贈，我終不受。」張大笑。次日，具{牲牢|祭祀用的牲口。牢本為養牲之圈，後指牛、羊、豕「三牲」。}祭之，又夢顧來謝曰：「人得一飽，可耐三日；鬼得一飽，可耐一年。我受君恩，可挨到{陰司|陰間的官府衙門。}{大計|明清考核官吏之制：外官每三年一考稱「大計」，京官稱「京察」。}，望薦{卓異|大計中的最優等評語，得「卓異」者可保舉升遷。}矣。」張問：「如此清官，何以不即升{城隍|一城之守護神，陰間地方官，品級高於土地。}？」曰：「解應酬者，可望{格外超升|破格、越級升遷。}；做清官者，只好大計卓薦。」';
+
+const TRANS='杭州錢塘縣的秀才張望齡，患了瘧疾。發高熱的時候，看見已經去世的同學顧某踉踉蹌地走來，說道：「兄長的壽數本來已經斷絕，幸虧幼年時曾經救過一個女子，因此增壽一紀（十二年）。先前兄長所救的那位女子，得知兄長病重，特地前來探問，卻被本地的鬼棍訛詐，陷她平日裡有不見人的陰私之事。我狠狠地把那鬼棍呵斥訓誡了一番，才把他打發走，如今特地到府上來道賀。」張望齡見老朋友是為了自己的事而來，衣裳破爛，臉上帶著飢餓的菜色，於是拿出銀子酬謝他。顧某推辭不肯接受，說道：「我如今是本地的土地神，因為官職太小，地方又清貧艱苦，加之我素來講究操守，不肯隨便接受鬼魂的訴狀、濫用威福，所以整年都沒有香火，雖然是個土地神，卻常常挨餓。然而非分的財物，即使是老朋友贈送，我終究不肯接受。」張望齡聽了大笑。第二天，備下豬羊等牲牢去祭祀他，當夜又夢見顧某前來道謝，說：「人吃一頓飽飯，可以支撐三天；鬼吃一頓飽飯，可以支撐一年。我承蒙您的恩惠，可以挨到陰間衙門的『大計』考核，有望被舉薦為『卓異』了。」張望齡問道：「像您這樣清廉的官，為什麼不馬上就升做城隍呢？」顧某答道：「懂得應酬周旋的，可望破格超升；做清官的，只好在大計時得個卓異的評語罷了。」';
+
+const ANALYSIS=[
+ {h:'出處與作者',b:`<p>本篇出自清代<span class="em">袁枚</span>（一七一六—一七九七）所著《子不語》（又名《新齊諧》）。袁枚字子才，號簡齋、隨園老人，錢塘（今杭州）人，乾隆四年進士，與趙翼、蔣士銓並稱「乾隆三大家」，論詩主「性靈」之說，為一代文壇宗主。</p><p>《子不語》之名，取自《論語・述而》「子不語怪、力、亂、神」，全書二十四卷，收短篇志怪七百餘則，多記鬼神狐魅、因果異聞。然其筆鋒所向，實不在怪力亂神，而在人間——所謂「不語」者，偏要語之，正是一種借鬼諷世的文人筆法。</p>`},
+ {h:'題旨：陰司即陽世之影',b:`<p>此篇最鋒利處，在結尾兩句：<span class="em">「解應酬者，可望格外超升；做清官者，只好大計卓薦。」</span>土地顧某，官卑地僻，又「素講操守，不肯擅受鬼詞，濫作威福」，於是「終年無香火，雖作土地，往往受餓」——這哪裡是寫鬼，分明是寫陽世一個清廉而潦倒的下層官吏。</p><p>陰司的「大計」「卓異」「城隍」，無一不是陽世官制的翻版；鬼棍訛詐、誣告成風，也正是衙門胥吏的寫真。袁枚借一個挨餓的土地之口，把「會做官的不如會應酬的」這層官場潛規則，說得既冷且笑。所謂「格外超升」與「大計卓薦」之差，便是鑽營者與守正者的命運之差：前者可以破格飛黃，後者至多得一句考語，依舊清貧。一語雙關，陽世陰間，竟無二致。</p>`},
+ {h:'善報與人情：不說教的因果',b:`<p>篇首「幼年曾救一女，益壽一紀」，是傳統的因果報應框架；救一命而延壽十二年，典出《國語》。然而袁枚寫來毫不道學：他不讓張望齡因此「感悟向善」，反而寫他「大笑」，寫他夢中掏荷包、醒來當袍當硯去祭友。</p><p>報應在此不是教條，而是一種溫厚的人情——你當年無心救起的那個落水女孩，與你三年未見的老同學，都在以各自的方式記著你。玉娘「每日為恩公點一盞燈」，顧某「受君恩，可挨到陰司大計」，一燈一飽，皆是人間最樸素的牽掛。因果之網，織的其實是情義。</p>`},
+ {h:'鬼亦有人：冥界的官僚與飢',b:`<p>袁枚筆下的陰間，是一套完整而瑣碎的官僚機器：有簿子記善惡，有鬼棍敲詐，有土地、城隍的品級，有大計的考核，有卓異的保舉。鬼會挨餓，會講操守，會為故人奔走，會因一頓飽飯而「面有血色」。換言之，<span class="em">鬼不過是換了處境的人</span>。</p><p>這種「以鬼寫人」的手法，使荒誕的設定落了地：讀者笑的是一個餓肚子的土地，心裡疼的卻是一切守正而清貧的人。「衣裳襤褸，面有菜色」八字，寫鬼如寫一個潦倒的老友，紙上幾欲聞其嘆息。</p>`},
+ {h:'筆法：簡淨、對話與「抖包袱」',b:`<p>全文不過二百餘字，卻起承轉合俱全，是《子不語》「以短勝長」的典範。其筆法有三可觀：一曰<span class="em">以對話行文</span>，全篇幾乎全靠顧某自述推進，張望齡只作襯托與追問，所謂「借他人之口，吐自家之塊壘」；二曰<span class="em">莊諧相生</span>，「操守」「清官」是莊，「鬼得一飽可耐一年」「回廟齋戒」是諧，正經題目偏用滑稽細節包裹，令人笑中帶嘆。</p><p>三曰<span class="em">結尾反跌</span>，前文鋪陳救女延壽、故人探病，讀者以為將歸於溫情，不料末二句陡然翻出官場諷刺，如相聲之「抖包袱」，全篇為之一亮，餘味頓生。「張大笑」三字，是張望齡的笑，也是袁枚的笑，更是讀者會心的笑。</p>`},
+ {h:'餘論：與紀昀的同題異趣',b:`<p>貧土地、餓鬼神之象，並非袁枚獨創；紀昀《閱微草堂筆記》中亦屢見土地訴窮、城隍嘆廉之筆，可見此為清代志怪的一個公共母題。然紀昀持論端謹，多寓勸懲，筆調近於學者札記；袁枚則放筆為戲，嬉笑怒罵，更近於文人小品。</p><p>同寫一個挨餓的土地，紀氏令人肅然，袁氏令人莞爾——而莞爾之後的那一點酸楚，或許正是《子不語》「不語怪力亂神」卻偏要語之的深意：<span class="em">怪力亂神本是鏡子，照的從來是鏡外的人間。</span></p>`}
+];
+
+/* ===================== HELPERS ===================== */
+const $=s=>document.querySelector(s);
+const ce=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function wrapPunct(t){return escHtml(t).replace(/([，。；：！？、「」『』《》])/g,'<i class="rp">$1</i>');}
+function parseOrig(s){
+  let out='',cards=[];const re=/\{([^|}]*)\|([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){
+    out+=wrapPunct(s.slice(last,m.index));
+    out+='<span class="anno" tabindex="0" data-note="'+escAttr(m[2])+'">'+escHtml(m[1])+'</span>';
+    cards.push({t:m[1],n:m[2]});last=re.lastIndex;
+  }
+  out+=wrapPunct(s.slice(last));
+  return {html:out,cards:cards};
+}
+function parseLine(t){
+  const parts=[];const re=/（[^）]*）/g;let last=0,m;
+  while((m=re.exec(t))){
+    if(m.index>last)parts.push({c:'',s:t.slice(last,m.index)});
+    parts.push({c:'stage',s:m[0]});last=re.lastIndex;
+  }
+  if(last<t.length)parts.push({c:'',s:t.slice(last)});
+  return parts;
+}
+function buildRevealed(parts,n){
+  let html='',rem=n;
+  for(const p of parts){
+    if(rem<=0)break;
+    const take=Math.min(p.s.length,rem);const sl=p.s.slice(0,take);
+    html+=p.c?'<span class="'+p.c+'">'+sl+'</span>':sl;
+    rem-=take;
+  }
+  return html;
+}
+
+/* ===================== AUDIO ENGINE ===================== */
+const Music={
+  ctx:null,master:null,mBus:null,sBus:null,on:true,started:false,timer:null,
+  base:130.81,scale:[0,2,4,7,9],notes:[],bufs:{},
+  walkIdx:7,beat:0,nextT:0,
+  ensure(){
+    if(!this.ctx){
+      this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+      this.master=this.ctx.createGain();this.master.gain.value=0.9;this.master.connect(this.ctx.destination);
+      this.mBus=this.ctx.createGain();this.mBus.gain.value=0.55;this.mBus.connect(this.master);
+      this.sBus=this.ctx.createGain();this.sBus.gain.value=0.7;this.sBus.connect(this.master);
+      for(let o=0;o<3;o++)for(const s of this.scale)this.notes.push(this.base*Math.pow(2,(s+12*o)/12));
+    }
+    if(this.ctx.state==='suspended')this.ctx.resume();
+  },
+  pluckBuf(freq){
+    const key=Math.round(freq);if(this.bufs[key])return this.bufs[key];
+    const sr=this.ctx.sampleRate,dur=2.4,N=Math.floor(sr*dur);
+    const buf=this.ctx.createBuffer(1,N,sr),d=buf.getChannelData(0);
+    const period=Math.max(2,Math.round(sr/freq));const ring=new Float32Array(period);
+    for(let i=0;i<period;i++)ring[i]=Math.random()*2-1;
+    let idx=0;
+    for(let i=0;i<N;i++){
+      const cur=ring[idx];const nx=(cur+ring[(idx+1)%period])*0.5*0.9965;
+      ring[idx]=nx;d[i]=cur*Math.exp(-(i/sr)*1.5);idx=(idx+1)%period;
+    }
+    this.bufs[key]=buf;return buf;
+  },
+  pluck(freq,when,vol,bus,stopAt){
+    if(!this.ctx)return;const src=this.ctx.createBufferSource();src.buffer=this.pluckBuf(freq);
+    const g=this.ctx.createGain();g.gain.setValueAtTime(vol,when);
+    src.connect(g);g.connect(bus||this.mBus);src.start(when);
+    if(stopAt)src.stop(when+stopAt);
+  },
+  xiao(freq,when,dur,vol){
+    if(!this.ctx)return;const o=this.ctx.createOscillator();o.type='sine';o.frequency.value=freq;
+    const lfo=this.ctx.createOscillator();lfo.frequency.value=5;const lg=this.ctx.createGain();lg.gain.value=freq*0.012;
+    lfo.connect(lg);lg.connect(o.frequency);
+    const lp=this.ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1500;
+    const g=this.ctx.createGain();g.gain.setValueAtTime(0,when);
+    g.gain.linearRampToValueAtTime(vol,when+0.5);g.gain.setValueAtTime(vol,when+dur-0.7);g.gain.linearRampToValueAtTime(0,when+dur);
+    o.connect(lp);lp.connect(g);g.connect(this.mBus);o.start(when);lfo.start(when);o.stop(when+dur+0.1);lfo.stop(when+dur+0.1);
+  },
+  bell(freq,when,vol){
+    if(!this.ctx)return;[1,2.76].forEach((mul,i)=>{
+      const o=this.ctx.createOscillator();o.type='sine';o.frequency.value=freq*mul;
+      const g=this.ctx.createGain();g.gain.setValueAtTime(vol*(i?0.4:1),when);g.gain.exponentialRampToValueAtTime(0.0001,when+2.6);
+      o.connect(g);g.connect(this.mBus);o.start(when);o.stop(when+2.7);
+    });
+  },
+  step(t){
+    const inRest=(this.beat%32)>=28;
+    if(!inRest){
+      if(Math.random()<0.72){
+        const r=Math.random();let d=r<0.6?(Math.random()<0.5?1:-1):r<0.85?(Math.random()<0.5?2:-2):0;
+        this.walkIdx=Math.max(2,Math.min(this.notes.length-3,this.walkIdx+d));
+        this.pluck(this.notes[this.walkIdx],t,0.12+Math.random()*0.16,this.mBus);
+        if(this.beat%4===0&&Math.random()<0.45)this.pluck(this.notes[Math.max(0,this.walkIdx-5)],t,0.06,this.mBus);
+      }
+      if(this.beat%8===0)this.xiao(this.notes[Math.floor(Math.random()*5)],t,0.62*4,0.04);
+      if(this.beat%16===0)this.bell(this.notes[12],t,0.05);
+    }
+    this.beat++;
+  },
+  sched(){
+    if(!this.ctx||!this.on)return;
+    while(this.nextT<this.ctx.currentTime+0.5){this.step(this.nextT);this.nextT+=0.62;}
+  },
+  start(){
+    this.ensure();this.on=true;this.started=true;
+    this.nextT=this.ctx.currentTime+0.1;this.beat=0;
+    if(!this.timer)this.timer=setInterval(()=>this.sched(),80);
+    this.mBus.gain.value=curVol.m/100*0.9;
+  },
+  stop(){this.on=false;if(this.timer){clearInterval(this.timer);this.timer=null;}},
+  toggle(){if(this.on){this.stop();}else{this.start();}return this.on;},
+  tick(){if(!this.ctx||!this.on)return;this.pluck(880,this.ctx.currentTime,0.10,this.sBus,0.16);},
+  choiceSfx(){if(!this.ctx||!this.on)return;const t=this.ctx.currentTime;this.pluck(659,t,0.09,this.sBus,0.2);this.pluck(880,t+0.09,0.09,this.sBus,0.25);},
+  stamp(){
+    if(!this.ctx||!this.on)return;const t=this.ctx.currentTime;
+    const sr=this.ctx.sampleRate,N=Math.floor(sr*0.2),b=this.ctx.createBuffer(1,N,sr),d=b.getChannelData(0);
+    for(let i=0;i<N;i++)d[i]=(Math.random()*2-1)*Math.exp(-(i/sr)*16);
+    const src=this.ctx.createBufferSource();src.buffer=b;const lp=this.ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=240;
+    const g=this.ctx.createGain();g.gain.value=0.3;src.connect(lp);lp.connect(g);g.connect(this.sBus);src.start(t);
+    const o=this.ctx.createOscillator();o.frequency.value=82;const og=this.ctx.createGain();og.gain.setValueAtTime(0.18,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+    o.connect(og);og.connect(this.sBus);o.start(t);o.stop(t+0.25);
+  }
+};
+let curVol={m:55,s:70};
+
+/* ===================== AMBIENT ===================== */
+const Ambient={
+  cvs:null,ctx:null,parts:[],mode:'petal',w:0,h:0,
+  init(){this.cvs=$('#ambient');this.ctx=this.cvs.getContext('2d');this.resize();window.addEventListener('resize',()=>this.resize());this.setMode('petal');this.loop();},
+  resize(){this.w=this.cvs.width=window.innerWidth;this.h=this.cvs.height=window.innerHeight;},
+  setMode(m){
+    this.mode=m;this.parts=[];
+    const n=m==='mist'?14:m==='firefly'?26:m==='petal'?22:30;
+    for(let i=0;i<n;i++)this.parts.push(this.make());
+  },
+  make(){
+    const m=this.mode;
+    return {x:Math.random()*this.w,y:Math.random()*this.h,r:m==='mist'?(60+Math.random()*90):m==='firefly'?(1.5+Math.random()*2.5):m==='petal'?(3+Math.random()*4):(1+Math.random()*2),
+      vx:(Math.random()-0.5)*(m==='mist'?0.4:0.3),vy:m==='petal'?(0.3+Math.random()*0.7):m==='dust'?-(0.1+Math.random()*0.3):(Math.random()-0.5)*0.3,
+      ph:Math.random()*Math.PI*2,sp:0.5+Math.random()*1.5,rot:Math.random()*Math.PI,
+      col:m==='petal'?['#e8c4c4','#f2d7d7','#fff7f0'][Math.floor(Math.random()*3)]:m==='firefly'?'#ffd98a':m==='mist'?'#ffffff':'#d8c9a3',
+      a:m==='mist'?0.05:m==='firefly'?0.6:0.4};
+  },
+  loop(){
+    const c=this.ctx;c.clearRect(0,0,this.w,this.h);const t=performance.now()/1000;
+    for(const p of this.parts){
+      p.x+=p.vx+Math.sin(t*p.sp+p.ph)*0.3;p.y+=p.vy;p.rot+=0.01;
+      if(this.mode==='petal'){if(p.y>this.h+10){p.y=-10;p.x=Math.random()*this.w;}}
+      else if(this.mode==='dust'){if(p.y<-10){p.y=this.h+10;p.x=Math.random()*this.w;}}
+      else {if(p.x<-20)p.x=this.w+20;if(p.x>this.w+20)p.x=-20;if(p.y<-20)p.y=this.h+20;if(p.y>this.h+20)p.y=-20;}
+      c.save();
+      if(this.mode==='mist'){
+        const g=c.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);g.addColorStop(0,'rgba(255,255,255,'+p.a+')');g.addColorStop(1,'rgba(255,255,255,0)');
+        c.fillStyle=g;c.beginPath();c.arc(p.x,p.y,p.r,0,7);c.fill();
+      }else if(this.mode==='firefly'){
+        const fl=0.4+0.6*Math.abs(Math.sin(t*p.sp+p.ph));
+        const g=c.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4);g.addColorStop(0,'rgba(255,217,138,'+(p.a*fl)+')');g.addColorStop(1,'rgba(255,217,138,0)');
+        c.fillStyle=g;c.beginPath();c.arc(p.x,p.y,p.r*4,0,7);c.fill();
+      }else if(this.mode==='petal'){
+        c.translate(p.x,p.y);c.rotate(p.rot);c.fillStyle=p.col;c.globalAlpha=p.a;
+        c.beginPath();c.ellipse(0,0,p.r,p.r*0.5,0,0,7);c.fill();
+      }else {c.fillStyle=p.col;c.globalAlpha=p.a;c.beginPath();c.arc(p.x,p.y,p.r,0,7);c.fill();}
+      c.restore();
+    }
+    requestAnimationFrame(()=>this.loop());
+  }
+};
+
+/* ===================== GAME STATE ===================== */
+const G={idx:0,flags:{},history:[],typing:false,waiting:false,revealed:0,parts:[],fullLen:0,typeTimer:null,autoTimer:null,auto:false,skip:false,curBg:null,sprEls:{},chapterName:'卷一'};
+const $bgA=$('#bgA'),$bgB=$('#bgB');let bgFront='A';
+
+function setBg(key){
+  if(!key||key===G.curBg)return;
+  const url=IMG[key];const front=bgFront==='A'?$bgA:$bgB;const back=bgFront==='A'?$bgB:$bgA;
+  back.style.backgroundImage='url('+url+')';
+  // crossfade
+  requestAnimationFrame(()=>{back.classList.add('on');front.classList.remove('on');});
+  bgFront=bgFront==='A'?'B':'A';
+  G.curBg=key;
+  Ambient.setMode(AMBIENT_MODE[key]||'dust');
+}
+
+function renderSprites(list,spk){
+  const want={};list.forEach(([id,pos])=>{want[id]=pos;});
+  // remove
+  Object.keys(G.sprEls).forEach(id=>{
+    if(!want[id]){const el=G.sprEls[id];el.classList.add('exit');delete G.sprEls[id];setTimeout(()=>el.remove(),460);}
+  });
+  // add / update
+  Object.keys(want).forEach(id=>{
+    let el=G.sprEls[id];
+    if(!el){
+      el=ce('div','sprwrap pos-'+want[id]);el.dataset.id=id;
+      const inner=ce('div','spr');const img=ce('img');img.src=IMG[id];inner.appendChild(img);el.appendChild(inner);
+      $('#sprites').appendChild(el);G.sprEls[id]=el;
+    }else{
+      el.classList.remove('pos-left','pos-center','pos-right');el.classList.add('pos-'+want[id]);
+    }
+    el.classList.remove('speak','dim');
+    if(spk===id)el.classList.add('speak');else el.classList.add('dim');
+  });
+}
+function clearSprites(){Object.keys(G.sprEls).forEach(id=>{const el=G.sprEls[id];el.classList.add('exit');delete G.sprEls[id];setTimeout(()=>el.remove(),460);});}
+
+function flash(){const f=$('#flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');}
+
+function showNode(){
+  clearTimeout(G.typeTimer);clearTimeout(G.autoTimer);
+  const node=SC[G.idx];
+  $('#progbar').style.width=(G.idx/SC.length*100)+'%';
+  if(!node){return;}
+  // conditional skip
+  if(node.if){let ok=true;for(const k in node.if){if(G.flags[k]!==node.if[k])ok=false;}if(!ok){G.idx++;showNode();return;}}
+  if(node.not){let ok=true;for(const k in node.not){if(G.flags[k]===node.not[k])ok=false;}if(!ok){G.idx++;showNode();return;}}
+
+  if(node.type==='chapter'){
+    G.waiting=true;G.chapterName=node.n;$('#chapName').textContent=node.n+'・'+node.t.replace(/\s/g,'');
+    $('#chapNum').textContent=node.n;$('#chapTitleOv').textContent=node.t;$('#chapSub').textContent=node.sub||'';
+    $('#chapSeal').textContent=node.n.slice(-1);
+    $('#chapterOv').classList.add('show');Music.stamp();
+    const delay=G.skip?700:2800;
+    G.autoTimer=setTimeout(()=>nextChapter(),delay);
+    save();return;
+  }
+  if(node.type==='choice'){
+    G.waiting=true;setBg(node.bg);renderSprites(node.s||[],null);
+    const box=$('#choices');box.innerHTML='';
+    const pr=ce('div','');pr.id='choicePrompt';pr.textContent=node.prompt;box.appendChild(pr);
+    node.opts.forEach((o,i)=>{
+      const b=ce('button','choice');b.innerHTML='<span class="mk">'+['壹','貳','參','肆'][i]+'</span>'+escHtml(o.t);
+      b.onclick=(e)=>{e.stopPropagation();for(const k in o.set)G.flags[k]=o.set[k];Music.choiceSfx();box.classList.remove('show');G.waiting=false;G.idx++;showNode();};
+      box.appendChild(b);
+    });
+    box.classList.add('show');Music.choiceSfx();save();return;
+  }
+  if(node.type==='end'){
+    G.waiting=true;clearSprites();setBg(node.bg);
+    $('#endOv').classList.add('show');Music.stamp();save();return;
+  }
+  // dialogue
+  $('#choices').classList.remove('show');
+  setBg(node.bg);renderSprites(node.s||[],node.k);
+  const ch=CHAR[node.k]||CHAR.n;
+  const np=$('#namePlate');np.style.background=ch.color;np.querySelector('::after');
+  $('#nameTxt').textContent=ch.name;
+  // fix ::after color via inline style on a child? use css var
+  np.style.setProperty('--pc',ch.color);
+  const dt=$('#dlgText');dt.className=ch.inner?'inner':'';
+  G.parts=parseLine(node.t);G.fullLen=G.parts.reduce((a,p)=>a+p.s.length,0);
+  // history
+  G.history.push({n:ch.name,t:node.t});renderHistory();
+  if(G.skip){G.revealed=G.fullLen;dt.innerHTML=buildRevealed(G.parts,G.fullLen);G.typing=false;$('#indicator').classList.add('show');G.autoTimer=setTimeout(()=>next(),90);save();return;}
+  G.revealed=0;G.typing=true;$('#indicator').classList.remove('show');dt.innerHTML='<span class="cur">▍</span>';
+  const speed=26;let last=performance.now();
+  const tick=(now)=>{
+    if(!G.typing)return;
+    const dtMs=now-last;last=now;G.revealed+=Math.max(1,Math.floor(dtMs/speed));
+    if(G.revealed>=G.fullLen){G.revealed=G.fullLen;dt.innerHTML=buildRevealed(G.parts,G.fullLen);finishType();return;}
+    dt.innerHTML=buildRevealed(G.parts,G.revealed)+'<span class="cur">▍</span>';
+    G.typeTimer=requestAnimationFrame(tick);
+  };
+  G.typeTimer=requestAnimationFrame(tick);
+  save();
+}
+function finishType(){
+  G.typing=false;$('#indicator').classList.add('show');Music.tick();
+  if(G.auto){G.autoTimer=setTimeout(()=>next(),Math.min(4200,700+G.fullLen*75));}
+}
+function completeType(){
+  if(!G.typing)return;cancelAnimationFrame(G.typeTimer);G.revealed=G.fullLen;
+  $('#dlgText').innerHTML=buildRevealed(G.parts,G.fullLen);finishType();
+}
+function advance(){
+  if(G.waiting)return;
+  if($('#history').classList.contains('show')||$('#analysis').classList.contains('show'))return;
+  if(G.typing){completeType();return;}
+  next();
+}
+function next(){
+  clearTimeout(G.autoTimer);
+  G.idx++;
+  if(G.idx>=SC.length){G.idx=SC.length-1;}
+  showNode();
+}
+function nextChapter(){
+  clearTimeout(G.autoTimer);$('#chapterOv').classList.remove('show');G.waiting=false;flash();G.idx++;showNode();
+}
+
+/* history */
+function renderHistory(){
+  const list=$('#histList');list.innerHTML='';
+  G.history.slice(-60).forEach(h=>{
+    const d=ce('div','hi');d.innerHTML='<span class="hn">'+escHtml(h.n)+'</span><span class="ht">'+escHtml(h.t)+'</span>';
+    list.appendChild(d);
+  });
+  list.scrollTop=list.scrollHeight;
+}
+
+/* save */
+function save(){try{localStorage.setItem('tdsh_save',JSON.stringify({idx:G.idx,flags:G.flags}));}catch(e){}}
+function loadSave(){try{const s=JSON.parse(localStorage.getItem('tdsh_save'));return s;}catch(e){return null;}}
+function clearSave(){try{localStorage.removeItem('tdsh_save');}catch(e){}}
+
+/* ===================== FLOW ===================== */
+function preload(cb){
+  const urls=Object.values(IMG);let done=0;const bar=$('#loadBar i');
+  urls.forEach(u=>{const im=new Image();im.onload=im.onerror=()=>{done++;bar.style.width=(done/urls.length*100)+'%';if(done>=urls.length)cb();};im.src=u;});
+}
+function startGame(atIdx){
+  $('#title').style.display='none';
+  $('#topbar').classList.add('show');$('#advanceLayer').classList.add('show');$('#dlgWrap').classList.add('show');
+  G.idx=atIdx||0;G.flags=atIdx?G.flags:{};G.history=[];G.waiting=false;G.typing=false;
+  if(!atIdx){clearSprites();}
+  Music.start();
+  showNode();
+}
+function toTitle(){
+  clearTimeout(G.typeTimer);clearTimeout(G.autoTimer);
+  $('#topbar').classList.remove('show');$('#advanceLayer').classList.remove('show');$('#dlgWrap').classList.remove('show');
+  $('#choices').classList.remove('show');$('#chapterOv').classList.remove('show');$('#endOv').classList.remove('show');
+  $('#history').classList.remove('show');$('#analysis').classList.remove('show');$('#volPop').classList.remove('show');
+  clearSprites();G.curBg=null;setBg('title');Ambient.setMode('petal');
+  $('#title').style.display='flex';
+  if(loadSave())$('#mCont').style.display='block';else $('#mCont').style.display='none';
+}
+
+/* analysis render */
+let analysisBuilt=false;
+function buildAnalysis(){
+  if(analysisBuilt)return;analysisBuilt=true;
+  const p=parseOrig(ORIG);
+  $('#origText').innerHTML=p.html;
+  $('#transText').innerHTML=escHtml(TRANS);
+  const cb=$('#cardsBox');p.cards.forEach(c=>{cb.innerHTML+='<div class="card"><div class="ct">'+escHtml(c.t)+'</div><div class="cn">'+escHtml(c.n)+'</div></div>';});
+  const ab=$('#analysisBody');ANALYSIS.forEach((s,i)=>{
+    ab.innerHTML+='<div style="margin-bottom:1.4em"><div class="an-h" style="font-size:1.3em"><span class="num">'+['一','二','三','四','五','六'][i]+'</span>'+escHtml(s.h)+'</div>'+s.b+'</div>';
+  });
+  // annotation interaction
+  const bar=$('#noteBar');
+  $('#origText').querySelectorAll('.anno').forEach(a=>{
+    const show=()=>{bar.innerHTML='<b>'+escHtml(a.textContent)+'</b>'+escHtml(a.dataset.note);};
+    a.addEventListener('mouseenter',show);a.addEventListener('focus',show);
+    a.addEventListener('click',e=>{e.stopPropagation();show();});
+  });
+}
+function openAnalysis(){buildAnalysis();$('#analysis').classList.add('show');$('#analysis').scrollTop=0;}
+function closeAnalysis(){$('#analysis').classList.remove('show');}
+
+/* ===================== EVENTS ===================== */
+$('#advanceLayer').addEventListener('click',advance);
+$('#dlgWrap').addEventListener('click',e=>{e.stopPropagation();advance();});
+
+$('#bHist').onclick=e=>{e.stopPropagation();$('#history').classList.toggle('show');};
+$('#histClose').onclick=()=>$('#history').classList.remove('show');
+$('#bAuto').onclick=e=>{e.stopPropagation();G.auto=!G.auto;$('#bAuto').classList.toggle('on',G.auto);if(G.auto&&!G.typing&&!G.waiting){G.autoTimer=setTimeout(()=>next(),1200);}};
+$('#bSkip').onclick=e=>{e.stopPropagation();G.skip=!G.skip;$('#bSkip').classList.toggle('on',G.skip);if(G.skip){if(G.typing)completeType();if(!G.waiting){clearTimeout(G.autoTimer);G.autoTimer=setTimeout(()=>next(),90);}}};
+$('#bMusic').onclick=e=>{e.stopPropagation();$('#volPop').classList.toggle('show');};
+$('#bTitle').onclick=e=>{e.stopPropagation();toTitle();};
+$('#tAudio').onclick=e=>{e.stopPropagation();Music.ensure();const on=Music.toggle();$('#tAudio').classList.toggle('on',on);$('#bMusic').classList.toggle('on',on);saveAudio();};
+
+$('#volMusic').oninput=e=>{curVol.m=+e.target.value;if(Music.mBus)Music.mBus.gain.value=curVol.m/100*0.9;saveAudio();};
+$('#volSfx').oninput=e=>{curVol.s=+e.target.value;if(Music.sBus)Music.sBus.gain.value=curVol.s/100;saveAudio();};
+
+$('#chapterOv').addEventListener('click',()=>{if(G.waiting)nextChapter();});
+$('#endAnalysis').onclick=()=>{openAnalysis();};
+$('#endReplay').onclick=()=>{$('#endOv').classList.remove('show');G.waiting=false;clearSave();G.flags={};G.history=[];clearSprites();G.idx=0;showNode();};
+
+$('#mStart').onclick=()=>{Music.ensure();$('#tAudio').classList.add('on');$('#bMusic').classList.add('on');$('#load').classList.remove('hide');preload(()=>{setTimeout(()=>{$('#load').classList.add('hide');clearSave();G.flags={};startGame(0);},300);});};
+$('#mCont').onclick=()=>{Music.ensure();$('#tAudio').classList.add('on');$('#bMusic').classList.add('on');const s=loadSave();$('#load').classList.remove('hide');preload(()=>{setTimeout(()=>{$('#load').classList.add('hide');startGame(s?s.idx:0);},300);});};
+$('#mAnalysis').onclick=()=>{Music.ensure();$('#tAudio').classList.add('on');openAnalysis();};
+
+$('#anBack').onclick=()=>{closeAnalysis();};
+$('#anReplay').onclick=()=>{closeAnalysis();$('#endOv').classList.remove('show');G.waiting=false;clearSave();G.flags={};G.history=[];clearSprites();G.idx=0;$('#topbar').classList.add('show');$('#advanceLayer').classList.add('show');$('#dlgWrap').classList.add('show');showNode();};
+$('#anTitle').onclick=()=>{closeAnalysis();toTitle();};
+
+document.addEventListener('keydown',e=>{
+  if($('#analysis').classList.contains('show')){if(e.key==='Escape')closeAnalysis();return;}
+  if($('#title').style.display!=='none'&&$('#title').style.display!=='')return;
+  if(e.key==='Escape'){$('#history').classList.remove('show');$('#volPop').classList.remove('show');return;}
+  if($('#history').classList.contains('show'))return;
+  if(e.key===' '||e.key==='Enter'||e.key==='ArrowRight'){e.preventDefault();advance();}
+  else if(e.key==='h'||e.key==='H')$('#bHist').click();
+  else if(e.key==='a'||e.key==='A')$('#bAuto').click();
+  else if(e.key==='m'||e.key==='M'){$('#volPop').classList.toggle('show');}
+});
+
+function saveAudio(){try{localStorage.setItem('tdsh_audio',JSON.stringify({on:Music.on,m:curVol.m,s:curVol.s}));}catch(e){}}
+function loadAudio(){try{const a=JSON.parse(localStorage.getItem('tdsh_audio'));if(a){curVol.m=a.m;curVol.s=a.s;$('#volMusic').value=a.m;$('#volSfx').value=a.s;}}catch(e){}}
+
+/* ===================== INIT ===================== */
+window.addEventListener('load',()=>{
+  Ambient.init();
+  setBg('title');
+  loadAudio();
+  if(loadSave())$('#mCont').style.display='block';
+  // hide loader after a beat (title images load via css)
+  setTimeout(()=>$('#load').classList.add('hide'),600);
+});
+// fix nameplate arrow color dynamically
+const npStyle=document.createElement('style');
+npStyle.textContent='#namePlate::after{border-top-color:var(--pc,#33565e);}';
+document.head.appendChild(npStyle);
+</script>
+</body>
+</html>
